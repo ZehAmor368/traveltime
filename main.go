@@ -45,6 +45,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Traveltime needs your current position to calculate which of the given locations is the origin.
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
 	defer cancel()
@@ -52,7 +53,10 @@ func main() {
 	if err != nil {
 		log.Fatal("failed to fetch geolocation: ", err)
 	}
+	// Use the current position to calculate the origin.
 	origin, destination := findDirection(work, home, locationResult.Location)
+	// Call an upstream API for the optimal and actual travel duration.
+	// For now use Google's Distance Matrix API.
 	distanceResult, err := client.DistanceMatrix(ctx, &maps.DistanceMatrixRequest{
 		Origins:       []string{origin.LatLng.String()},
 		Destinations:  []string{destination.LatLng.String()},
@@ -63,7 +67,10 @@ func main() {
 	if err != nil {
 		log.Fatal("failed to fetch distance matrix: ", err)
 	}
-
+	// Traveltime is designed to return the optimal travel duration, the time you would travel without traffic.
+	// It also returns the actual travel duration, the time you should plan considering the current traffic situation.
+	//
+	// Calculate those information from the API response.
 	durationInTrafficSec := math.RoundToEven(distanceResult.Rows[0].Elements[0].DurationInTraffic.Seconds())
 	durationInTrafficMin := math.RoundToEven(distanceResult.Rows[0].Elements[0].DurationInTraffic.Minutes())
 	durationSec := math.RoundToEven(distanceResult.Rows[0].Elements[0].Duration.Seconds())
@@ -88,6 +95,9 @@ func calculateDistance(point1, point2 maps.LatLng) float64 {
 	return math.Sqrt(math.Pow(point2.Lat-point1.Lat, 2) + math.Pow(point2.Lng-point1.Lng, 2))
 }
 
+// LatLngName extends the googlemaps.github.io/maps.LatLng struct with a name.
+//
+// See `go doc googlemaps.github.io/maps.LatLng` for more information.
 type LatLngName struct {
 	maps.LatLng
 	Name string
