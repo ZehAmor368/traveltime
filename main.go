@@ -13,9 +13,9 @@ import (
 )
 
 var (
-	apiEnv  string = "GOOGLE_API_KEY"
-	workEnv string = "TRAVEL_WORK_COORD"
-	homeEnv string = "TRAVEL_HOME_COORD"
+	apiEnv  = "GOOGLE_API_KEY"
+	workEnv = "TRAVEL_WORK_COORD"
+	homeEnv = "TRAVEL_HOME_COORD"
 )
 
 func main() {
