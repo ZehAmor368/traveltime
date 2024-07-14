@@ -1,4 +1,4 @@
-module traveltime
+module github.com/ZehAmor368/traveltime
 
 go 1.18
 
