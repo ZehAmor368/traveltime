@@ -1,3 +1,5 @@
+// Traveltime is a CLI tool that returns the travel time between two locations.
+// It also returns the traffic induced delay, so you can avoid long waits in traffic.
 package main
 
 import (
