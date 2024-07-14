@@ -9,15 +9,18 @@ import (
 	"math"
 	"os"
 	"strings"
+	"text/template"
 	"time"
 
 	"googlemaps.github.io/maps"
 )
 
 var (
-	apiEnv  = "GOOGLE_API_KEY"
-	workEnv = "TRAVEL_WORK_COORD"
-	homeEnv = "TRAVEL_HOME_COORD"
+	apiEnv          = "GOOGLE_API_KEY"
+	workEnv         = "TRAVEL_WORK_COORD"
+	homeEnv         = "TRAVEL_HOME_COORD"
+	formatOutputEnv = "TRAVEL_FORMAT_OUTPUT"
+	defaultFormat   = `{{ .Origin.Name }}: {{ .WithTraffic }} {{ .Deviation.Absolute }}min`
 )
 
 func main() {
@@ -32,6 +35,15 @@ func main() {
 	homeArg := os.Getenv(homeEnv)
 	if homeArg == "" {
 		log.Fatalf("missing home coordinate, use %q to provide key.\n", homeEnv)
+	}
+	format := defaultFormat
+	if customFormat := os.Getenv(formatOutputEnv); customFormat != "" {
+		format = customFormat
+	}
+
+	outTemplate, err := template.New("output").Parse(format)
+	if err != nil {
+		log.Fatalf("invalid format %q: %e", defaultFormat, err)
 	}
 	work, err := parseLatLngName(workArg)
 	if err != nil {
@@ -78,7 +90,10 @@ func main() {
 	durationSec := math.RoundToEven(distanceResult.Rows[0].Elements[0].Duration.Seconds())
 	deviation := (100 / durationSec * durationInTrafficSec) - 100
 
-	fmt.Printf("%s: %dmin %+d%%\n", destination.Name, int(durationInTrafficMin), int(deviation))
+	if err := outTemplate.Execute(os.Stdout, result); err != nil {
+		log.Fatal("failed to execute template: ", err)
+	}
+}
 }
 
 // findDirection calculates which coordinate is less far away from your current location.
