@@ -85,15 +85,65 @@ func main() {
 	// It also returns the actual travel duration, the time you should plan considering the current traffic situation.
 	//
 	// Calculate those information from the API response.
-	durationInTrafficSec := math.RoundToEven(distanceResult.Rows[0].Elements[0].DurationInTraffic.Seconds())
-	durationInTrafficMin := math.RoundToEven(distanceResult.Rows[0].Elements[0].DurationInTraffic.Minutes())
-	durationSec := math.RoundToEven(distanceResult.Rows[0].Elements[0].Duration.Seconds())
-	deviation := (100 / durationSec * durationInTrafficSec) - 100
+	result := &TravelResult{
+		Origin:      origin,
+		Destination: destination,
+		WithTraffic: int(getWithTrafficDuration(distanceResult).Minutes()),
+		NoTraffic:   int(getNoTrafficeDuration(distanceResult).Minutes()),
+		Deviation:   newDeviation(distanceResult),
+	}
 
 	if err := outTemplate.Execute(os.Stdout, result); err != nil {
 		log.Fatal("failed to execute template: ", err)
 	}
 }
+
+func getWithTrafficDuration(distanceResult *maps.DistanceMatrixResponse) time.Duration {
+	return distanceResult.Rows[0].Elements[0].DurationInTraffic
+}
+
+func getNoTrafficeDuration(distanceResult *maps.DistanceMatrixResponse) time.Duration {
+	return distanceResult.Rows[0].Elements[0].Duration
+}
+
+func getAbsoluteDeviation(distanceResult *maps.DistanceMatrixResponse) float64 {
+	withTraffic := distanceResult.Rows[0].Elements[0].DurationInTraffic.Minutes()
+	noTraffic := distanceResult.Rows[0].Elements[0].Duration.Minutes()
+	return (withTraffic - noTraffic)
+}
+
+func getRelativeDeviation(distanceResult *maps.DistanceMatrixResponse) float64 {
+	withTraffic := distanceResult.Rows[0].Elements[0].DurationInTraffic.Seconds()
+	noTraffic := distanceResult.Rows[0].Elements[0].Duration.Seconds()
+	return ((100 / noTraffic * withTraffic) - 100)
+}
+
+// TravelResult holds all informations about a travel.
+// It contains different representations of the travel time and the deviation.
+// All fields can be accessed by the output template.
+type TravelResult struct {
+	Origin, Destination LatLngName
+	// WithTraffic is the calculated travel time under consideration of traffic induced delay.
+	WithTraffic int
+	// NoTraffic is the optimal travel time without any delay by traffic.
+	NoTraffic int
+	// Deviation contains the difference between NoTraffic and WithTraffic in different formats.
+	Deviation Deviation
+}
+
+// Deviation contains different versions of the delay induced by traffic on the travel.
+type Deviation struct {
+	// Relative is the deviation in percent.
+	Relative string
+	// Absolute is the deviation in minutes.
+	Absolute string
+}
+
+func newDeviation(distanceResult *maps.DistanceMatrixResponse) Deviation {
+	return Deviation{
+		Relative: fmt.Sprintf("%+d", int(getRelativeDeviation(distanceResult))),
+		Absolute: fmt.Sprintf("%+d", int(getAbsoluteDeviation(distanceResult))),
+	}
 }
 
 // findDirection calculates which coordinate is less far away from your current location.
