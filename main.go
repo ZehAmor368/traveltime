@@ -45,11 +45,11 @@ func main() {
 
 	outTemplate, err := template.New("output").Parse(format)
 	if err != nil {
-		log.Fatalf("invalid format %q: %e", defaultFormat, err)
+		log.Fatalf("invalid format ", defaultFormat, ": ", err)
 	}
 	work, err := parseLatLngName(workArg)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Parsing ", workEnv, ": ", err)
 	}
 	workSymbol := os.Getenv(workSymbolEnv)
 	if workSymbol != "" {
@@ -57,7 +57,7 @@ func main() {
 	}
 	home, err := parseLatLngName(homeArg)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Parsing ", homeEnv, ": ", err)
 	}
 	homeSymbol := os.Getenv(homeSymbolEnv)
 	if homeSymbol != "" {
