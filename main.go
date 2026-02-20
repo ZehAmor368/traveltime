@@ -18,7 +18,9 @@ import (
 var (
 	apiEnv          = "GOOGLE_API_KEY"
 	workEnv         = "TRAVEL_WORK_COORD"
+	workSymbolEnv   = "TRAVEL_WORK_SYMBOL"
 	homeEnv         = "TRAVEL_HOME_COORD"
+	homeSymbolEnv   = "TRAVEL_HOME_SYMBOL"
 	formatOutputEnv = "TRAVEL_FORMAT_OUTPUT"
 	defaultFormat   = `{{ .Origin.Name }}: {{ .WithTraffic }} {{ .Deviation.Absolute }}min`
 )
@@ -49,9 +51,17 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	workSymbol := os.Getenv(workSymbolEnv)
+	if workSymbol != "" {
+		work.Symbol = workSymbol
+	}
 	home, err := parseLatLngName(homeArg)
 	if err != nil {
 		log.Fatal(err)
+	}
+	homeSymbol := os.Getenv(homeSymbolEnv)
+	if homeSymbol != "" {
+		home.Symbol = homeSymbol
 	}
 
 	client, err := maps.NewClient(maps.WithAPIKey(apiKey))
@@ -166,8 +176,13 @@ func calculateDistance(point1, point2 maps.LatLng) float64 {
 //
 // See `go doc googlemaps.github.io/maps.LatLng` for more information.
 type LatLngName struct {
+	// googlemaps.github.io/maps.LatLng
 	maps.LatLng
+	// Descriptive Name of the position
 	Name string
+	// Arbitraty representation of the position, allows the user to keep .Name descriptive
+	// Defaults to `.Name`
+	Symbol string
 }
 
 func parseLatLngName(location string) (LatLngName, error) {
@@ -186,5 +201,6 @@ func parseLatLngName(location string) (LatLngName, error) {
 		return LatLngName{}, err
 	}
 	result.Name = name
+	result.Symbol = name
 	return result, nil
 }

@@ -17,12 +17,17 @@ You can access the fields of:
  * LatLngName
  ```Go
 type LatLngName struct {
+        // googlemaps.github.io/maps.LatLng
         maps.LatLng
+        // Descriptive Name of the position
         Name string
+        // Arbitraty representation of the position, allows the user to keep .Name descriptive
+        // Defaults to `.Name`
+        Symbol string
 }
-// LatLngName extends the googlemaps.github.io/maps.LatLng struct with a name.
-//
-// See `go doc googlemaps.github.io/maps.LatLng` for more information.
+    LatLngName extends the googlemaps.github.io/maps.LatLng struct with a name.
+
+    See `go doc googlemaps.github.io/maps.LatLng` for more information.
  ```
  * Deviation
  ```Go
@@ -49,3 +54,7 @@ type TravelResult struct {
 // representations of the travel time and the deviation. All fields can be
 // accessed by the output template.
 ```
+
+There are also the environment variables `TRAVEL_WORK_SYMBOL` and `TRAVEL_HOME_SYMBOL` that allow you to configure arbitrary representations for both positions.
+Unicode characters are supported.
+They configure the field `LatLngName.Symbol`. To use them in the output use `{{ .Origin.Symbol }}` or `{{ .Destination.Symbol }}`.
