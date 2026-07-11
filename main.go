@@ -6,8 +6,10 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"math"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/template"
 	"time"
@@ -19,10 +21,13 @@ var (
 	apiEnv          = "GOOGLE_API_KEY"
 	workEnv         = "TRAVEL_WORK_COORD"
 	workSymbolEnv   = "TRAVEL_WORK_SYMBOL"
+	historyFilename = "traveltime.history"
 	homeEnv         = "TRAVEL_HOME_COORD"
 	homeSymbolEnv   = "TRAVEL_HOME_SYMBOL"
 	formatOutputEnv = "TRAVEL_FORMAT_OUTPUT"
 	defaultFormat   = `{{ .Origin.Name }}: {{ .WithTraffic }} {{ .Deviation.Absolute }}min`
+	xdgStateHomeEnv = "XDG_STATE_HOME"
+	logger          *slog.Logger
 )
 
 func main() {
@@ -45,7 +50,7 @@ func main() {
 
 	outTemplate, err := template.New("output").Parse(format)
 	if err != nil {
-		log.Fatalf("invalid format ", defaultFormat, ": ", err)
+		log.Fatalln("invalid format ", defaultFormat, ": ", err)
 	}
 	work, err := parseLatLngName(workArg)
 	if err != nil {
@@ -63,6 +68,11 @@ func main() {
 	if homeSymbol != "" {
 		home.Symbol = homeSymbol
 	}
+	logPath := os.Getenv(xdgStateHomeEnv)
+	if logPath == "" {
+		log.Printf("missing log path using stdout instead, configure %q in your environment variables\n", xdgStateHomeEnv)
+	}
+	logger = setupLogger(logPath)
 
 	client, err := maps.NewClient(maps.WithAPIKey(apiKey))
 	if err != nil {
@@ -106,6 +116,7 @@ func main() {
 	if err := outTemplate.Execute(os.Stdout, result); err != nil {
 		log.Fatal("failed to execute template: ", err)
 	}
+	logger.Info("success", "result", result)
 }
 
 func getWithTrafficDuration(distanceResult *maps.DistanceMatrixResponse) time.Duration {
@@ -203,4 +214,21 @@ func parseLatLngName(location string) (LatLngName, error) {
 	result.Name = name
 	result.Symbol = name
 	return result, nil
+}
+
+// setupLogger verifies whether the relevant path exists or creates it when neccessary. In case $XDG_STATE_HOME is not configured, it uses stdout.
+func setupLogger(path string) *slog.Logger {
+	if path == "" {
+		return slog.New(slog.NewTextHandler(os.Stderr, nil))
+	}
+	err := os.MkdirAll(path, 0700)
+	if err != nil {
+		panic(err)
+	}
+	path = filepath.Join(path, historyFilename)
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0700)
+	if err != nil {
+		panic(err)
+	}
+	return slog.New(slog.NewJSONHandler(file, nil))
 }
