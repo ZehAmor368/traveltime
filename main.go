@@ -217,11 +217,17 @@ func parseLatLngName(location string) (LatLngName, error) {
 }
 
 // setupLogger verifies whether the relevant path exists or creates it when neccessary. In case $XDG_STATE_HOME is not configured, it uses stdout.
-func setupLogger(path string) *slog.Logger {
-	if path == "" {
+func setupLogger(basePath string) *slog.Logger {
+	if basePath == "" {
 		return slog.New(slog.NewTextHandler(os.Stderr, nil))
 	}
-	err := os.MkdirAll(path, 0700)
+	exePath, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	executableName := filepath.Base(exePath)
+	path := filepath.Join(basePath, executableName)
+	err = os.MkdirAll(path, 0700)
 	if err != nil {
 		panic(err)
 	}
